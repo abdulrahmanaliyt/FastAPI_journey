@@ -1,21 +1,30 @@
 from fastapi import FastAPI
 
 app = FastAPI()
-#Path Parameters
+#Query Parameters
+#uses: filtering , searching ,sorting etc
+#eg.
+# url/users?name=abdul
+# url/product?price=200
 
-#Users dynamic Route
-@app.get("/users1/{user_id1}")
-def get_users1(user_id1):
-    return {"user_id1": user_id1}
+@app.get("/users1")
+def get_users(name):
+    return {"name":name}
 
-#Users dynamic Route with validation
-@app.get("/users2/{user_id2}")
-def get_users2(user_id2:int):
-    return {"user_id2": user_id2}
+#optional parameters
+@app.get("/users2")
+def get_users(name:str = None ):
+    return {"name":name}
 
-#Users dynamic Route with validation
-@app.get("/users/{user_id}")
-def get_users(user_id:str):
-    return {"user_id": user_id}
+#default values parameters
+@app.get("/products")
+def get_users(limit: int =10 ):
+    return {"limit":limit}
 
-
+#multiple query parameters
+@app.get("/items")
+def get_items(item: str = None,price: int=0 ):
+    return {
+        "item":item,
+        "price":price
+    }

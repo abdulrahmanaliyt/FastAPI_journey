@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 
 app = FastAPI()
-#Path Parameters
+
+#Understanding Path Parameters and Query Parameters
+# A. Path parameters
+# Path parameters are values included directly in the URL. Example:
+# /user_id1/101
+# url : http://127.0.0.1:8000/user_id1/101
 
 #Users dynamic Route
 @app.get("/users1/{user_id1}")

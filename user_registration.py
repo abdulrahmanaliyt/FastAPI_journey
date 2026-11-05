@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI , HTTPException
 from pydantic import BaseModel, EmailStr, Field
 
 app = FastAPI()
@@ -25,7 +25,12 @@ users = []
 @app.post("/register", response_model=UserResponse, status_code=201)
 def register_user(user: UserRegister):
     
-    new_id = len(users) + 1
+    # new_id = len(users) + 1
+    
+    new_id = max(
+    (user["id"] for user in users),
+    default=0
+) + 1
     
     new_user = {
         "id": new_id, 
@@ -40,3 +45,13 @@ def register_user(user: UserRegister):
 @app.get("/users", response_model=list[UserResponse])
 def get_users():
     return users
+@app.get("/users/{user_id}", response_model=UserResponse)
+def get_user(user_id: int):
+    for user in users:
+        if user["id"] == user_id:
+            return user
+
+    raise HTTPException(
+        status_code=404,
+        detail="User not found"
+    )

@@ -20,3 +20,4 @@ class CourseResponse(BaseModel):
   price: float
 
   model_config = ConfigDict(from_attributes=True)
+#   This allows Pydantic to build response objects from SQLAlchemy model instances.

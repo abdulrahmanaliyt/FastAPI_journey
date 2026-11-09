@@ -1,3 +1,5 @@
+from builtins import Exception
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -32,10 +34,15 @@ def home():
     response_model=CourseResponse,
     status_code=status.HTTP_201_CREATED,
 )
+# CRUD implementation
 def create_course(course: CourseCreate, db: Session = Depends(get_db)):
   new_course = Course(**course.model_dump())
   db.add(new_course)
-  db.commit()
+  try:
+    db.commit()
+  except Exception:
+    db.rollback()
+    raise
   db.refresh(new_course)
   return new_course
 
@@ -52,7 +59,7 @@ def get_courses(db: Session = Depends(get_db)):
 @app.get("/courses/{course_id}", response_model=CourseResponse)
 def get_course(course_id: int, db: Session = Depends(get_db)):
   course = db.get(Course, course_id)
-  if not course:
+  if course is None:
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
     )

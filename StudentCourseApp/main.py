@@ -68,7 +68,7 @@ def create_course(course_in: CourseCreate, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         print(f"DATABASE ERROR: {e}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Course with this title already exists")
 
     db.refresh(course)
     return course

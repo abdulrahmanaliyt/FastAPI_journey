@@ -24,7 +24,7 @@ class CourseResponse(BaseModel):
     id: int
     title: str
     duration: int
-    price: float = 0
+    price: float | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

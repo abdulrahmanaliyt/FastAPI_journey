@@ -1,12 +1,17 @@
-from sqlite3 import IntegrityError
+import jwt
+from sqlalchemy.exc import IntegrityError
 
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import select
 
 from .database import engine, Base, SessionLocal
-from .models import Student, Course, Enrollment
+from .models import User, Student, Course, Enrollment
 from .schemas import (
+    UserCreate,
+    UserResponse,
+    Token,
     StudentCreate,
     StudentResponse,
     CourseCreate,
@@ -14,6 +19,13 @@ from .schemas import (
     EnrollmentCreate,
     EnrollmentResponse,
     StudentWithCoursesResponse,
+)
+from .security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    SECRET_KEY,
+    ALGORITHM
 )
 
 # Create tables in PostgreSQL automatically
@@ -60,6 +72,127 @@ def get_students_with_courses(db: Session = Depends(get_db)):
         })
 
     return result
+
+# Build registration and login APIs for user registration
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login"
+)
+@app.post(
+    "/auth/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED
+)
+def register_user(
+    user_in: UserCreate,
+    db: Session = Depends(get_db)
+):
+    user = User(
+        email=user_in.email,
+        password_hash=hash_password(user_in.password),
+        role="user"
+    )
+
+    db.add(user)
+
+    try:
+        db.commit()
+        db.refresh(user)
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="Email already registered"
+        )
+
+    return user
+#Login endpoint for user authentication and token generation
+@app.post("/auth/login", response_model=Token)
+def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    user = db.scalar(
+        select(User).where(User.email == form_data.username)
+    )
+
+    if not user or not verify_password(
+        form_data.password,
+        user.password_hash
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    access_token = create_access_token(user.id)
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+    
+#create a dependency that validates the token and retrieves the logged-in user.
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"}
+    )
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        user_id = payload.get("sub")
+
+        if not isinstance(user_id, str):
+            raise credentials_exception
+
+        user = db.get(User, int(user_id))
+
+    except (jwt.InvalidTokenError, ValueError):
+        raise credentials_exception
+
+    if user is None:
+        raise credentials_exception
+
+    return user
+
+# create a protected endpoint
+@app.get("/auth/me", response_model=UserResponse)
+def get_my_profile(
+    current_user: User = Depends(get_current_user)
+):
+    return current_user
+
+# Implement role-based authorization
+def require_admin(
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+
+    return current_user
+# Now protect an admin endpoint:
+@app.get("/admin/dashboard")
+def admin_dashboard(
+    current_user: User = Depends(require_admin)
+):
+    return {
+        "message": "Welcome to the Admin Dashboard",
+        "admin": current_user.email
+    }
 
 # --- 1. Students Endpoints ---
 @app.post("/students", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)

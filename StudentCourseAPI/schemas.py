@@ -1,5 +1,23 @@
 from datetime import date
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel,EmailStr, ConfigDict, Field
+
+# --Create schemas for user registration and authentication
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    role: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 # --- Student Schemas ---

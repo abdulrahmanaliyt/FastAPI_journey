@@ -24,7 +24,7 @@ class Course(Base):
     title: Mapped[str] = mapped_column(String(100), nullable=False)
     duration: Mapped[int] = mapped_column(Integer, nullable=False)  # in weeks or hours
     price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     # One-to-Many relationship with Enrollment
     enrollments: Mapped[list["Enrollment"]] = relationship(
         back_populates="course", cascade="all, delete-orphan"

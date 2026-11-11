@@ -39,7 +39,7 @@ def get_students(db: Session = Depends(get_db)):
     return db.scalars(select(Student)).all()
 
 # get students, courses, and enrollments endpoints
-@app.get("/students-with-courses", response_model=List[StudentWithCoursesResponse])
+@app.get("/students-with-courses", response_model=list[StudentWithCoursesResponse])
 def get_students_with_courses(db: Session = Depends(get_db)):
     # 1. Query students and eagerly load enrollments and their associated courses
     stmt = select(Student).options(selectinload(Student.enrollments).selectinload(Enrollment.course))
@@ -197,6 +197,33 @@ def get_courses_for_student(
         ]
     }
 
+@app.get("/courses/{course_id}/students")
+def get_students_for_course(course_id: int, db: Session = Depends(get_db)):
+    stmt = (
+        select(Course)
+        .where(Course.id == course_id)
+        .options(
+            selectinload(Course.enrollments)
+            .selectinload(Enrollment.student)
+        )
+    )
+
+    course = db.scalars(stmt).first()
+
+    if course is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Course not found"
+        )
+
+    return {
+        "course": course.title,
+        "students": [
+            enrollment.student.name
+            for enrollment in course.enrollments
+        ]
+    }
+
 
 # Assignment B — Cascade deletion
 # Requirements:
@@ -226,29 +253,3 @@ def delete_student(
         "message": "Student and associated enrollments deleted successfully"
     }
     
-@app.get("/courses/{course_id}/students")
-def get_students_for_course(course_id: int, db: Session = Depends(get_db)):
-    stmt = (
-        select(Course)
-        .where(Course.id == course_id)
-        .options(
-            selectinload(Course.enrollments)
-            .selectinload(Enrollment.student)
-        )
-    )
-
-    course = db.scalars(stmt).first()
-
-    if course is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Course not found"
-        )
-
-    return {
-        "course": course.title,
-        "students": [
-            enrollment.student.name
-            for enrollment in course.enrollments
-        ]
-    }

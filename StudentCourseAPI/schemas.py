@@ -27,10 +27,13 @@ class CourseResponse(BaseModel):
     price: float | None = None
     model_config = ConfigDict(from_attributes=True)
 
+from pydantic import BaseModel, ConfigDict, Field
+
 class StudentWithCoursesResponse(BaseModel):
     id: int
     name: str
-    courses: list[str] = []
+    courses: list[str] = Field(default_factory=list)
+
     model_config = ConfigDict(from_attributes=True)
     
 # --- Enrollment Schemas ---
@@ -44,4 +47,3 @@ class EnrollmentResponse(BaseModel):
     student_id: int
     course_id: int
     enrollment_date: date
-    model_config = ConfigDict(from_attributes=True)

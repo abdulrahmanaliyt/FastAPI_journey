@@ -1,30 +1,38 @@
-from sqlalchemy import Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
-# A SQLAlchemy model describes a database table. It does not automatically create that table until we call Base.metadata.create_all().
 
-class Student(Base):
-    __tablename__ = "students"  #__tablename__	PostgreSQL table name
+class Passenger(Base):
+    __tablename__ = "passengers"
 
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        index=True
-    )
+    id: Mapped[int] = mapped_column(primary_key=True)
 
     name: Mapped[str] = mapped_column(
         String(100),
         nullable=False
     )
 
-    course: Mapped[str] = mapped_column(
-        String(50),
+    bookings: Mapped[list["Booking"]] = relationship(
+        back_populates="passenger"
+    )
+    
+class Booking(Base):
+    __tablename__ = "bookings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    train_number: Mapped[str] = mapped_column(
+        String(20),
         nullable=False
     )
 
-    year: Mapped[int] = mapped_column(
-        Integer,
+    passenger_id: Mapped[int] = mapped_column(
+        ForeignKey("passengers.id"),
         nullable=False
+    )
+
+    passenger: Mapped["Passenger"] = relationship(
+        back_populates="bookings"
     )

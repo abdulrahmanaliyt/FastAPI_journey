@@ -1,120 +1,103 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from builtins import Exception
+
+from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.database import engine, Base, SessionLocal
-from app.models import Student
-from app.schemas import StudentCreate, StudentUpdate, StudentResponse
+from .database import Base, SessionLocal, engine
+from .models import Course
+from .schemas import CourseCreate, CourseResponse, CourseUpdate
 
+app = FastAPI(title="Course Management API - FastAPI PostgreSQL Journey")
 
-app = FastAPI(title="FastAPI PostgreSQL Journey")
-
-
-# Create database tables if they do not exist
+# Create database tables automatically if they don't exist
 Base.metadata.create_all(bind=engine)
 
 
 # Database session dependency
-def get_db():       #FastAPI calls get_db() when an endpoint needs a database session.
-    db = SessionLocal()
-
-# The yield provides the session to the endpoint, and the finally block closes it after the request.
-
-    try:
-        yield db
-    finally:
-        db.close()
+def get_db():
+  db = SessionLocal()
+  try:
+    yield db
+  finally:
+    db.close()
 
 
 @app.get("/")
 def home():
-    return {"message": "FastAPI connected to PostgreSQL!"}
+  return {"message": "Course Management API connected to PostgreSQL!"}
 
-# CREATE student
+
+# 1. CREATE a course
 @app.post(
-    "/students",
-    response_model=StudentResponse,
-    status_code=status.HTTP_201_CREATED
+    "/courses",
+    response_model=CourseResponse,
+    status_code=status.HTTP_201_CREATED,
 )
-def create_student(
-    student: StudentCreate,
-    db: Session = Depends(get_db)
+# CRUD implementation
+def create_course(course: CourseCreate, db: Session = Depends(get_db)):
+  new_course = Course(**course.model_dump())
+  db.add(new_course)
+  try:
+    db.commit()
+  except Exception:
+    db.rollback()
+    raise
+  db.refresh(new_course)
+  return new_course
+
+
+# 2. READ all courses
+@app.get("/courses", response_model=list[CourseResponse])
+def get_courses(db: Session = Depends(get_db)):
+  query = select(Course).order_by(Course.id)
+  courses = db.scalars(query).all()
+  return courses
+
+
+# 3. READ one course by ID
+@app.get("/courses/{course_id}", response_model=CourseResponse)
+def get_course(course_id: int, db: Session = Depends(get_db)):
+  course = db.get(Course, course_id)
+  if course is None:
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+    )
+  return course
+
+
+# 4. PATCH - Update course details partially
+@app.patch("/courses/{course_id}", response_model=CourseResponse)
+def update_course(
+    course_id: int, course: CourseUpdate, db: Session = Depends(get_db)
 ):
-    new_student = Student(**student.model_dump())
-
-    db.add(new_student) #stages a new record for insertion.
-    db.commit()             #commits the transaction, saving the new record to the database.
-    db.refresh(new_student) #retrieves updated database values, including any auto-generated fields like id.   
-
-    return new_student
-
-
-# READ all students
-@app.get("/students", response_model=list[StudentResponse])
-def get_students(db: Session = Depends(get_db)):
-    # Create a SELECT query for the Student model, sorted in ascending order by their ID
-    query = select(Student).order_by(Student.id)
-    #Executes the query and returns scalar results (the actual Python model instances instead of raw database rows/tuples).
-    students = db.scalars(query).all()
-
-    return students
-
-
-# READ one student
-@app.get("/students/{student_id}", response_model=StudentResponse)
-def get_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.get(Student, student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    return student
-
-
-# UPDATE student
-@app.patch("/students/{student_id}", response_model=StudentResponse)
-def update_student(
-    student_id: int,
-    student_data: StudentUpdate,
-    db: Session = Depends(get_db)
-):
-    student = db.get(Student, student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    update_data = student_data.model_dump(
-        exclude_unset=True,
-        exclude_none=True
+  db_course = db.get(Course, course_id)
+  if not db_course:
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
     )
 
-    for key, value in update_data.items():
-        setattr(student, key, value)
+  update_data = course.model_dump(exclude_unset=True, exclude_none=True)
+  for key, value in update_data.items():
+    setattr(db_course, key, value)
 
-    db.commit()
-    db.refresh(student)
+  db.commit()
+  db.refresh(db_course)
+  return db_course
 
-    return student
 
+# 5. DELETE a course
+@app.delete("/courses/{course_id}")
+def delete_course(course_id: int, db: Session = Depends(get_db)):
+  db_course = db.get(Course, course_id)
+  if not db_course:
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Course not found"
+    )
 
-# DELETE student
-@app.delete("/students/{student_id}")
-def delete_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.get(Student, student_id)
-
-    if student is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Student not found"
-        )
-
-    db.delete(student)
-    db.commit()
-
-    return {"message": "Student deleted successfully"}
+  db.delete(db_course)
+  db.commit()
+  return {
+      "message": f"Course ID {course_id} deleted successfully",
+      "deleted_course": {"id": db_course.id, "title": db_course.title},
+  }

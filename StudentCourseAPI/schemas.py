@@ -45,8 +45,6 @@ class CourseResponse(BaseModel):
     price: float | None = None
     model_config = ConfigDict(from_attributes=True)
 
-from pydantic import BaseModel, ConfigDict, Field
-
 class StudentWithCoursesResponse(BaseModel):
     id: int
     name: str

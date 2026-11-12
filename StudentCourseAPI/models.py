@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional
-from sqlalchemy import Date, Float, ForeignKey, Integer, String, UniqueConstraint,Boolean
+from sqlalchemy import Date, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
@@ -52,10 +52,6 @@ class Course(Base):
     enrollments: Mapped[list["Enrollment"]] = relationship(
         back_populates="course", cascade="all, delete-orphan"
     )
-#     ForeignKey(
-#     "students.id",
-#     ondelete="CASCADE"
-# )
 
 class Enrollment(Base):
     __tablename__ = "enrollments"

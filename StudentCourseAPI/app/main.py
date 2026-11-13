@@ -1,7 +1,13 @@
 import logging
-from fastapi import FastAPI,Request
+from fastapi import FastAPI,Request,HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from app.core.responses import (
+    success_response,
+    error_response
+)
 from app.routers import (
     auth,
     users,
@@ -36,6 +42,42 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=jsonable_encoder(
+            error_response(str(exc.detail))
+        ),
+        headers=exc.headers
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError
+):
+    errors = [
+        {
+            "field": ".".join(str(item) for item in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"]
+        }
+        for error in exc.errors()
+    ]
+
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder(
+            error_response(
+                message="Request validation failed",
+                data=errors
+            )
+        )
+    )
+
+# Golbal exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(
     request: Request,
@@ -49,7 +91,7 @@ async def global_exception_handler(
 
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        ontent=error_response("Internal server error")
     )
     
 app.include_router(auth.router)
@@ -61,7 +103,6 @@ app.include_router(users.router)
 
 @app.get("/")
 def home():
-    return {
-        "message": "Student Course API is running"
-    }
-    
+    return success_response(
+        message="Student Course API is running"
+    )

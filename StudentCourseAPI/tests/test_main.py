@@ -13,9 +13,10 @@ def test_home():
     assert response.status_code == 200
 
     assert response.json() == {
-        "message": "Student Course API is running"
+        "success": True,
+        "message": "Student Course API is running",
+        "data": None
     }
-
 
 def test_get_student_profile_without_authentication():
     response = client.get("/students/me")

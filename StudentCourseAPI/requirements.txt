@@ -10,3 +10,5 @@ python-multipart
 python-dotenv
 psycopg[binary]
 email-validator
+pytest
+httpx

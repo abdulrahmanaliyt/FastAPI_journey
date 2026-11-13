@@ -29,8 +29,17 @@ router = APIRouter(
 )
 
 
-# Any authenticated user can view courses
-@router.get("", response_model=list[CourseResponse])
+# Any authenticated user can view or Get all courses
+@router.get(
+    "",
+    response_model=list[CourseResponse],
+    summary="Get all courses",
+    description="Retrieve all available courses. Any authenticated user can access this endpoint.",
+    response_description="List of available courses",
+    responses={
+        401: {"description": "Authentication required"}
+    }
+)
 def get_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -42,7 +51,15 @@ def get_courses(
 @router.post(
     "",
     response_model=CourseResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a course",
+    description="Create a new course. Only administrators are authorized.",
+    response_description="Successfully created course",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        409: {"description": "Course creation conflict"}
+    }
 )
 def add_course(
     course_data: CourseCreate,
@@ -51,12 +68,20 @@ def add_course(
 ):
     return create_course(db, course_data)
 
-@router.patch(
-    "/{course_id}",
-    response_model=CourseResponse
-)
 
 # Only admin can update courses
+@router.patch(
+    "/{course_id}",
+    response_model=CourseResponse,
+    summary="Update a course",
+    description="Update an existing course using its ID. Only administrators can perform this operation.",
+    response_description="Updated course details",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        404: {"description": "Course not found"}
+    }
+)
 def update_course(
     course_id: int,
     course_data: CourseCreate,
@@ -74,7 +99,17 @@ def update_course(
     return updated_course
 
 # Only admin can delete courses
-@router.delete("/{course_id}")
+@router.delete(
+    "/{course_id}",
+    summary="Delete a course",
+    description="Delete an existing course using its ID. Only administrators can perform this operation.",
+    response_description="Course deletion confirmation",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        404: {"description": "Course not found"}
+    }
+)
 def remove_course(
     course_id: int,
     db: Session = Depends(get_db),

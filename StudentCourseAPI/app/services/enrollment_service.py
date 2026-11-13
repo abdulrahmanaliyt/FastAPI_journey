@@ -59,20 +59,23 @@ def create_enrollment(
     enrollment = Enrollment(
         student_id=student_id,
         course_id=course_id
-    )
-
-    db.add(enrollment)
+    )    
 
     try:
+        db.add(enrollment)
         db.commit()
         db.refresh(enrollment)
 
-    except IntegrityError:
+    except IntegrityError as error:
         db.rollback()
 
         raise DuplicateEnrollmentError(
             "Enrollment could not be created because of a database constraint"
-        )
+        ) from error
+
+    except Exception:
+        db.rollback()
+        raise
 
     return enrollment
 
@@ -81,13 +84,17 @@ class EnrollmentNotFoundError(Exception):
 
 
 def delete_enrollment(db: Session, enrollment_id: int):
-
     enrollment = db.get(Enrollment, enrollment_id)
 
     if enrollment is None:
         raise EnrollmentNotFoundError("Enrollment not found")
 
-    db.delete(enrollment)
-    db.commit()
+    try:
+        db.delete(enrollment)
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
 
     return enrollment

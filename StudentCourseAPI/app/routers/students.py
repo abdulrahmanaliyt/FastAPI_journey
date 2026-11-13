@@ -1,4 +1,6 @@
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -33,13 +35,21 @@ router = APIRouter(
 def get_students(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
+    search: str | None = Query(default=None, min_length=1),
+    name: str | None = Query(default=None, min_length=1),
+    sort_by: Literal["id", "name"] = "id",
+    sort_order: Literal["asc", "desc"] = "asc",
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
     return get_all_students(
         db=db,
         skip=skip,
-        limit=limit
+        limit=limit,
+        search=search,
+        name=name,
+        sort_by=sort_by,
+        sort_order=sort_order
     )
 
 # Admin only: Create a student

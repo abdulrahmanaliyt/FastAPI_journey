@@ -12,6 +12,7 @@ from app.models.user import User
 
 from app.schemas.course import (
     CourseCreate,
+    CourseUpdate,
     CourseResponse
 )
 
@@ -70,21 +71,22 @@ def add_course(
 
 
 # Only admin can update courses
+
 @router.patch(
     "/{course_id}",
     response_model=CourseResponse,
     summary="Update a course",
-    description="Update an existing course using its ID. Only administrators can perform this operation.",
-    response_description="Updated course details",
+    description="Partially update an existing course. Only supplied fields are modified.",
     responses={
         401: {"description": "Authentication required"},
         403: {"description": "Admin access required"},
-        404: {"description": "Course not found"}
+        404: {"description": "Course not found"},
+        422: {"description": "Invalid update data"}
     }
 )
 def update_course(
     course_id: int,
-    course_data: CourseCreate,
+    course_data: CourseUpdate,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):

@@ -26,6 +26,9 @@ def create_course(db: Session, course_data):
     db.refresh(course)
 
     return course
+
+
+
 def update_course(db: Session, course_id: int, course_data):
     statement = select(Course).where(Course.id == course_id)
     course = db.scalars(statement).first()
@@ -33,15 +36,21 @@ def update_course(db: Session, course_id: int, course_data):
     if not course:
         return None
 
-    course.title = course_data.title
-    course.duration = course_data.duration
-    course.price = course_data.price
-    course.description = course_data.description
+    update_data = course_data.model_dump(exclude_unset=True)
 
-    db.commit()
-    db.refresh(course)
+    for field, value in update_data.items():
+        setattr(course, field, value)
+
+    try:
+        db.commit()
+        db.refresh(course)
+    except Exception:
+        db.rollback()
+        raise
 
     return course
+
+
 
 def delete_course(db: Session, course_id: int):
     statement = select(Course).where(Course.id == course_id)

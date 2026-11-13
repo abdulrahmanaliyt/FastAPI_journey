@@ -20,11 +20,18 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
-
+# Register
 @router.post(
     "/register",
     response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new user",
+    description="Create a new user account using an email address and password.",
+    response_description="Successfully registered user",
+    responses={
+        409: {"description": "Email address is already registered"},
+        422: {"description": "Invalid registration data"}
+    }
 )
 def register(
     user_data: UserCreate,
@@ -40,9 +47,33 @@ def register(
         )
 
 
+# Login
 @router.post(
     "/login",
-    response_model=Token
+    response_model=Token,
+    summary="Login and obtain access token",
+    description="""
+    Authenticate a user using email and password.
+
+    Submit credentials as form data:
+    - username: Registered email address
+    - password: Account password
+
+    Returns a JWT access token that can be used
+    to authenticate protected API requests.
+    """,
+    response_description="JWT access token",
+    responses={
+        401: {
+            "description": "Invalid email or password",
+            "headers": {
+                "WWW-Authenticate": {
+                    "description": "Bearer authentication challenge",
+                    "schema": {"type": "string"}
+                }
+            }
+        }
+    }
 )
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -70,9 +101,16 @@ def login(
         )
 
 
+# Get current user
 @router.get(
     "/me",
-    response_model=UserResponse
+    response_model=UserResponse,
+    summary="Get current user",
+    description="Retrieve the profile of the currently authenticated user using their JWT access token.",
+    response_description="Authenticated user's profile",
+    responses={
+        401: {"description": "Invalid or missing access token"}
+    }
 )
 def get_my_profile(
     current_user: User = Depends(get_current_user)

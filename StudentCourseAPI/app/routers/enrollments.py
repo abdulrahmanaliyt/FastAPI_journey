@@ -24,10 +24,17 @@ router = APIRouter(
     tags=["Enrollments"]
 )
 
-
+# Get all enrollments
 @router.get(
     "",
-    response_model=list[EnrollmentResponse]
+    response_model=list[EnrollmentResponse],
+    summary="Get all enrollments",
+    description="Retrieve all student-course enrollment records. Only administrators can access this endpoint.",
+    response_description="List of enrollment records",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"}
+    }
 )
 def get_enrollments(
     db: Session = Depends(get_db),
@@ -36,10 +43,20 @@ def get_enrollments(
     return get_all_enrollments(db)
 
 
+# Create an enrollment
 @router.post(
     "",
     response_model=EnrollmentResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Create an enrollment",
+    description="Enroll a student in a course. Only administrators can perform this operation.",
+    response_description="Successfully created enrollment",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        404: {"description": "Student or course not found"},
+        409: {"description": "Student is already enrolled in this course"}
+    }
 )
 def add_enrollment(
     enrollment_data: EnrollmentCreate,
@@ -72,7 +89,18 @@ def add_enrollment(
         )
 
 
-@router.delete("/{enrollment_id}")
+# Delete an enrollment
+@router.delete(
+    "/{enrollment_id}",
+    summary="Delete an enrollment",
+    description="Remove a student's enrollment using the enrollment ID. Only administrators can perform this operation.",
+    response_description="Enrollment deletion confirmation",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        404: {"description": "Enrollment not found"}
+    }
+)
 def remove_enrollment(
     enrollment_id: int,
     db: Session = Depends(get_db),

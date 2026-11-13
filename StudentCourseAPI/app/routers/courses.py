@@ -13,6 +13,7 @@ from app.models.user import User
 from app.schemas.course import (
     CourseCreate,
     CourseUpdate,
+    CourseReplace,
     CourseResponse
 )
 
@@ -20,7 +21,8 @@ from app.services.course_service import (
     get_all_courses,
     create_course,
     update_course as update_course_service,
-    delete_course
+    delete_course,
+    replace_course as replace_course_service
 )
 
 
@@ -99,6 +101,40 @@ def update_course(
         )
 
     return updated_course
+
+
+# Change the complete course data
+@router.put(
+    "/{course_id}",
+    response_model=CourseResponse,
+    summary="Replace a course",
+    description="Replace all editable fields of an existing course. Only administrators can perform this operation.",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        404: {"description": "Course not found"},
+        422: {"description": "Invalid replacement data"}
+    }
+)
+def replace_course(
+    course_id: int,
+    course_data: CourseReplace,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    replaced_course = replace_course_service(
+        db,
+        course_id,
+        course_data
+    )
+
+    if not replaced_course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Course not found"
+        )
+
+    return replaced_course
 
 # Only admin can delete courses
 @router.delete(

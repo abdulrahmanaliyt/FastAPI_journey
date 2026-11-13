@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.course import Course
 
 
+# Get all courses
 def get_all_courses(db: Session):
     statement = select(Course)
 
@@ -14,6 +15,7 @@ def get_all_courses(db: Session):
     return courses
 
 
+# Create a new courses
 def create_course(db: Session, course_data):
     course = Course(
         title=course_data.title,
@@ -28,7 +30,7 @@ def create_course(db: Session, course_data):
     return course
 
 
-
+# Update Courses partially
 def update_course(db: Session, course_id: int, course_data):
     statement = select(Course).where(Course.id == course_id)
     course = db.scalars(statement).first()
@@ -50,6 +52,29 @@ def update_course(db: Session, course_id: int, course_data):
 
     return course
 
+
+# Replacement service function
+
+def replace_course(db: Session, course_id: int, course_data):
+    statement = select(Course).where(Course.id == course_id)
+    course = db.scalars(statement).first()
+
+    if not course:
+        return None
+
+    course.title = course_data.title
+    course.duration = course_data.duration
+    course.price = course_data.price
+    course.description = course_data.description
+
+    try:
+        db.commit()
+        db.refresh(course)
+    except Exception:
+        db.rollback()
+        raise
+
+    return course
 
 
 def delete_course(db: Session, course_id: int):

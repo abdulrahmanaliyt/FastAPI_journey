@@ -1,3 +1,4 @@
+from app.core.logging_config import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -83,37 +84,75 @@ class StudentProfileNotFound(Exception):
     pass
 
 
-def create_my_student_profile(
-    db: Session,
-    user_id: int,
-    name: str
-):
-    # Check whether this user already has a profile
+# def create_my_student_profile(
+#     db: Session,
+#     user_id: int,
+#     name: str
+# ):
+#     # Check whether this user already has a profile
+#     existing_student = db.scalar(
+#         select(Student).where(Student.user_id == user_id)
+#     )
+
+#     if existing_student:
+#         raise StudentProfileAlreadyExists(
+#             "You already have a student profile"
+#         )
+
+#     student = Student(
+#         name=name,
+#         user_id=user_id
+#     )
+
+#     db.add(student)
+
+#     try:
+#         db.commit()
+#         db.refresh(student)
+#     except Exception:
+#         db.rollback()
+#         raise
+
+#     return student
+
+def create_my_student_profile(db: Session, user_id: int, name: str):
+
+    logger.info("Creating student profile for user_id=%s", user_id)
+
     existing_student = db.scalar(
         select(Student).where(Student.user_id == user_id)
     )
 
     if existing_student:
+        logger.warning(
+            "Student profile already exists for user_id=%s",
+            user_id
+        )
         raise StudentProfileAlreadyExists(
-            "You already have a student profile"
+            "Student profile already exists"
         )
 
-    student = Student(
-        name=name,
-        user_id=user_id
-    )
-
-    db.add(student)
+    student = Student(name=name, user_id=user_id)
 
     try:
+        db.add(student)
         db.commit()
         db.refresh(student)
+
+        logger.info(
+            "Student profile created successfully: student_id=%s",
+            student.id
+        )
+
     except Exception:
         db.rollback()
+        logger.exception(
+            "Failed to create student profile for user_id=%s",
+            user_id
+        )
         raise
 
     return student
-
 
 def get_my_student_profile(
     db: Session,

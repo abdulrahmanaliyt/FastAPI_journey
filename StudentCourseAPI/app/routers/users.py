@@ -12,10 +12,24 @@ router = APIRouter(
     tags=["Users"]
 )
 
-
+# Normal users to access their own profile.
+# Administrators to access any user's profile.
 @router.get(
     "/{user_id}",
-    response_model=UserResponse
+    response_model=UserResponse,
+    summary="Get user by ID",
+    description="""
+    Retrieve a user profile using its ID.
+
+    Authorization rules:
+    - Normal users can access only their own profile.
+    - Administrators can access any user's profile.
+    """,
+    response_description="Requested user profile",
+    responses={
+        401: {"description": "Authentication required"},
+        404: {"description": "User not found or access not permitted"}
+    }
 )
 def get_user_profile(
     user_id: int,

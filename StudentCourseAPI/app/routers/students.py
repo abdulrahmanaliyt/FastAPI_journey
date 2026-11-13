@@ -31,7 +31,17 @@ router = APIRouter(
 
 
 # Admin only: Get all students
-@router.get("", response_model=list[StudentResponse])
+@router.get(
+    "",
+    response_model=list[StudentResponse],
+    summary="Get all students",
+    description="Retrieve students with pagination, searching, filtering, and sorting. Admin access required.",
+    response_description="List of student records",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"}
+    }
+)
 def get_students(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
@@ -56,7 +66,15 @@ def get_students(
 @router.post(
     "",
     response_model=StudentResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a student",
+    description="Create a new student record. Only administrators can use this endpoint.",
+    response_description="Successfully created student",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"},
+        409: {"description": "Student creation conflict"}
+    }
 )
 def add_student(
     student_data: StudentCreate,
@@ -77,7 +95,14 @@ def add_student(
 @router.post(
     "/me",
     response_model=StudentResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    summary="Create my student profile",
+    description="Create a student profile associated with the currently authenticated user.",
+    response_description="Successfully created student profile",
+    responses={
+        401: {"description": "Authentication required"},
+        409: {"description": "Student profile already exists"}
+    }
 )
 def create_my_profile(
     student_data: StudentCreate,
@@ -101,7 +126,14 @@ def create_my_profile(
 # Get your own student profile
 @router.get(
     "/me",
-    response_model=StudentResponse
+    response_model=StudentResponse,
+    summary="Get my student profile",
+    description="Retrieve the student profile belonging to the currently authenticated user.",
+    response_description="Student profile",
+    responses={
+        401: {"description": "Authentication required"},
+        404: {"description": "Student profile not found"}
+    }
 )
 def get_my_profile(
     db: Session = Depends(get_db),
@@ -120,8 +152,18 @@ def get_my_profile(
         )
 
 
-# Any authenticated user: Get one student
-@router.get("/{student_id}", response_model=StudentResponse)
+# Any authenticated user: Get your 
+@router.get(
+    "/{student_id}",
+    response_model=StudentResponse,
+    summary="Get student by ID",
+    description="Retrieve a student by ID. Users can only access their own student profile.",
+    response_description="Student record",
+    responses={
+        401: {"description": "Authentication required"},
+        404: {"description": "Student not found or access not permitted"}
+    }
+)
 def get_student(
     student_id: int,
     db: Session = Depends(get_db),

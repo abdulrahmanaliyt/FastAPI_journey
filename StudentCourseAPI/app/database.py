@@ -10,7 +10,7 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL is missing from .env")
 
 # Create database engine
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=False, future=True)
 
 # Create session maker
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)

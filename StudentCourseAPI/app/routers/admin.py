@@ -13,9 +13,17 @@ router = APIRouter(
 )
 
 
+# admin router
 @router.get(
     "/users",
-    response_model=list[UserResponse]
+    response_model=list[UserResponse],
+    summary="Get all users",
+    description="Retrieve a list of all registered users. This endpoint is restricted to administrators.",
+    response_description="List of registered users",
+    responses={
+        401: {"description": "Authentication required"},
+        403: {"description": "Admin access required"}
+    }
 )
 def list_users(
     db: Session = Depends(get_db),

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-
+from app.core.rate_limiter import limiter
 from app.core.dependencies import get_db, get_current_user
 from app.core.responses import success_response
 from app.core.security import create_access_token
@@ -36,7 +36,9 @@ router = APIRouter(
         422: {"description": "Invalid registration data"}
     }
 )
+@limiter.limit("3/hour")
 def register(
+    request: Request,
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
@@ -82,7 +84,9 @@ def register(
         }
     }
 )
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):

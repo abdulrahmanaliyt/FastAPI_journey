@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.schemas.student import StudentCreate, StudentResponse
 
+from app.schemas.common import APIResponse
+from app.core.responses import success_response
+
 from app.services.student_service import (
     get_all_students,
     get_student_by_id,
@@ -33,7 +36,7 @@ router = APIRouter(
 # Admin only: Get all students
 @router.get(
     "",
-    response_model=list[StudentResponse],
+    response_model=APIResponse,
     summary="Get all students",
     description="Retrieve students with pagination, searching, filtering, and sorting. Admin access required.",
     response_description="List of student records",
@@ -51,8 +54,8 @@ def get_students(
     sort_order: Literal["asc", "desc"] = "asc",
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
-):
-    return get_all_students(
+):    
+    students = get_all_students(
         db=db,
         skip=skip,
         limit=limit,
@@ -61,11 +64,15 @@ def get_students(
         sort_by=sort_by,
         sort_order=sort_order
     )
+    return success_response(
+        message="Successfully retrieved all students data", 
+        data = students
+        )
 
 # Admin only: Create a student
 @router.post(
     "",
-    response_model=StudentResponse,
+    response_model=APIResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a student",
     description="Create a new student record. Only administrators can use this endpoint.",
@@ -82,7 +89,11 @@ def add_student(
     admin: User = Depends(require_admin)
 ):
     try:
-        return create_student(db, student_data.name)
+        new_student =  create_student(db, student_data.name)
+        return success_response(
+            message = "Student created successfully.",
+            data = new_student
+        )
 
     except ValueError as error:
         raise HTTPException(
@@ -94,7 +105,7 @@ def add_student(
 # Create your own student profile
 @router.post(
     "/me",
-    response_model=StudentResponse,
+    response_model=APIResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create my student profile",
     description="Create a student profile associated with the currently authenticated user.",
@@ -108,12 +119,16 @@ def create_my_profile(
     student_data: StudentCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
-):
+):    
     try:
-        return create_my_student_profile(
-            db=db,
-            user_id=current_user.id,
-            name=student_data.name
+        new_student = create_my_student_profile(
+                        db=db,
+                        user_id=current_user.id,
+                        name=student_data.name
+                    )
+        return success_response(
+            message="Your student profile created successfully", 
+            data=new_student
         )
 
     except StudentProfileAlreadyExists as error:
@@ -126,7 +141,7 @@ def create_my_profile(
 # Get your own student profile
 @router.get(
     "/me",
-    response_model=StudentResponse,
+    response_model=APIResponse,
     summary="Get my student profile",
     description="Retrieve the student profile belonging to the currently authenticated user.",
     response_description="Student profile",
@@ -140,10 +155,14 @@ def get_my_profile(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        return get_my_student_profile(
+        students = get_my_student_profile(
             db=db,
             user_id=current_user.id
         )
+        return success_response(
+            message="Students retrieved successfully", 
+            data=students
+            )
 
     except StudentProfileNotFound as error:
         raise HTTPException(
@@ -155,7 +174,7 @@ def get_my_profile(
 # Any authenticated user: Get your 
 @router.get(
     "/{student_id}",
-    response_model=StudentResponse,
+    response_model=APIResponse,
     summary="Get student by ID",
     description="Retrieve a student by ID. Users can only access their own student profile.",
     response_description="Student record",
@@ -177,8 +196,11 @@ def get_student(
 
     if student is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found"
         )
 
-    return student
+    return success_response(
+                message = "Students retrieved successfully", 
+                data = student
+                )

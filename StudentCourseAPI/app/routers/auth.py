@@ -3,8 +3,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, get_current_user
+from app.core.responses import success_response
 from app.core.security import create_access_token
 from app.models.user import User
+from app.schemas.common import APIResponse
 from app.schemas.user import UserCreate, UserResponse, Token
 
 from app.services.auth_service import (
@@ -20,10 +22,11 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
+
 # Register
 @router.post(
     "/register",
-    response_model=UserResponse,
+    response_model=APIResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
     description="Create a new user account using an email address and password.",
@@ -38,7 +41,11 @@ def register(
     db: Session = Depends(get_db)
 ):
     try:
-        return register_user(db, user_data)
+        new_user = register_user(db, user_data)
+        return success_response(
+            message="User registered successfully",
+            data=new_user
+        )
 
     except EmailAlreadyRegisteredError as error:
         raise HTTPException(
@@ -50,7 +57,7 @@ def register(
 # Login
 @router.post(
     "/login",
-    response_model=Token,
+    response_model=APIResponse,
     summary="Login and obtain access token",
     description="""
     Authenticate a user using email and password.
@@ -88,10 +95,13 @@ def login(
 
         access_token = create_access_token(user.id)
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer"
-        }
+        return success_response(
+            message="Login successful",
+            data={
+                "access_token": access_token,
+                "token_type": "bearer"
+            }
+        )
 
     except InvalidCredentialsError as error:
         raise HTTPException(
@@ -104,7 +114,7 @@ def login(
 # Get current user
 @router.get(
     "/me",
-    response_model=UserResponse,
+    response_model=APIResponse,
     summary="Get current user",
     description="Retrieve the profile of the currently authenticated user using their JWT access token.",
     response_description="Authenticated user's profile",
@@ -115,4 +125,7 @@ def login(
 def get_my_profile(
     current_user: User = Depends(get_current_user)
 ):
-    return current_user
+    return success_response(
+        message="User profile retrieved successfully",
+        data=current_user
+    )

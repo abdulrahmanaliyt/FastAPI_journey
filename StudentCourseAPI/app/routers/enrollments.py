@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_admin
+from app.core.responses import success_response
 from app.models.user import User
+from app.schemas.common import APIResponse
 from app.schemas.enrollment import (
     EnrollmentCreate,
     EnrollmentResponse
@@ -24,10 +26,11 @@ router = APIRouter(
     tags=["Enrollments"]
 )
 
+
 # Get all enrollments
 @router.get(
     "",
-    response_model=list[EnrollmentResponse],
+    response_model=APIResponse,
     summary="Get all enrollments",
     description="Retrieve all student-course enrollment records. Only administrators can access this endpoint.",
     response_description="List of enrollment records",
@@ -40,13 +43,17 @@ def get_enrollments(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
-    return get_all_enrollments(db)
+    enrollments = get_all_enrollments(db)
+    return success_response(
+        message="Enrollments retrieved successfully",
+        data=enrollments
+    )
 
 
 # Create an enrollment
 @router.post(
     "",
-    response_model=EnrollmentResponse,
+    response_model=APIResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create an enrollment",
     description="Enroll a student in a course. Only administrators can perform this operation.",
@@ -64,10 +71,14 @@ def add_enrollment(
     admin: User = Depends(require_admin)
 ):
     try:
-        return create_enrollment(
+        new_enrollment = create_enrollment(
             db=db,
             student_id=enrollment_data.student_id,
             course_id=enrollment_data.course_id
+        )
+        return success_response(
+            message="Enrollment created successfully",
+            data=new_enrollment
         )
 
     except StudentNotFoundError as error:
@@ -92,6 +103,7 @@ def add_enrollment(
 # Delete an enrollment
 @router.delete(
     "/{enrollment_id}",
+    response_model=APIResponse,
     summary="Delete an enrollment",
     description="Remove a student's enrollment using the enrollment ID. Only administrators can perform this operation.",
     response_description="Enrollment deletion confirmation",
@@ -108,10 +120,10 @@ def remove_enrollment(
 ):
     try:
         delete_enrollment(db, enrollment_id)
-
-        return {
-            "message": "Enrollment deleted successfully"
-        }
+        return success_response(
+            message="Enrollment deleted successfully",
+            data=None
+        )
 
     except EnrollmentNotFoundError as error:
         raise HTTPException(

@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, get_current_user
+from app.core.responses import success_response
 from app.models.user import User
+from app.schemas.common import APIResponse
 from app.schemas.user import UserResponse
 from app.services.user_service import get_user_by_id
 
@@ -12,11 +14,12 @@ router = APIRouter(
     tags=["Users"]
 )
 
+
 # Normal users to access their own profile.
 # Administrators to access any user's profile.
 @router.get(
     "/{user_id}",
-    response_model=UserResponse,
+    response_model=APIResponse,
     summary="Get user by ID",
     description="""
     Retrieve a user profile using its ID.
@@ -53,4 +56,7 @@ def get_user_profile(
             detail="User not found"
         )
 
-    return requested_user
+    return success_response(
+        message="User retrieved successfully",
+        data=requested_user
+    )

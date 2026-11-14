@@ -1,11 +1,13 @@
 from typing import Any
 
+from fastapi.encoders import jsonable_encoder
+
 
 def success_response(message: str, data: Any = None):
     return {
         "success": True,
         "message": message,
-        "data": data
+        "data": jsonable_encoder(data)
     }
 
 

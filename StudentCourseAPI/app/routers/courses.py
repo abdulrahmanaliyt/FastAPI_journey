@@ -10,11 +10,14 @@ from app.core.dependencies import (
 
 from app.models.user import User
 
+from app.schemas.common import APIResponse
+from app.core.responses import success_response
+
 from app.schemas.course import (
     CourseCreate,
     CourseUpdate,
     CourseReplace,
-    CourseResponse
+    CourseResponse,
 )
 
 from app.services.course_service import (
@@ -35,7 +38,7 @@ router = APIRouter(
 # Any authenticated user can view or Get all courses
 @router.get(
     "",
-    response_model=list[CourseResponse],
+    response_model=APIResponse,
     summary="Get all courses",
     description="Retrieve all available courses. Any authenticated user can access this endpoint.",
     response_description="List of available courses",
@@ -47,13 +50,17 @@ def get_courses(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return get_all_courses(db)
-
-
+    courses = get_all_courses(db)
+    return success_response(
+        message = "Courses retrieved successfully",
+        data = courses
+    )
+    
+    
 # Only admin can create courses
 @router.post(
     "",
-    response_model=CourseResponse,
+    response_model=APIResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a course",
     description="Create a new course. Only administrators are authorized.",
@@ -69,14 +76,19 @@ def add_course(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
-    return create_course(db, course_data)
+    new_course = create_course(db, course_data)
+    
+    return success_response(
+    message="Course created successfully",
+    data= new_course
+) 
 
 
 # Only admin can update courses
 
 @router.patch(
     "/{course_id}",
-    response_model=CourseResponse,
+    response_model=APIResponse,
     summary="Update a course",
     description="Partially update an existing course. Only supplied fields are modified.",
     responses={
@@ -100,13 +112,15 @@ def update_course(
             detail="Course not found"
         )
 
-    return updated_course
-
+    return success_response(
+    message="Course updated successfully",
+    data=updated_course
+)
 
 # Change the complete course data
 @router.put(
     "/{course_id}",
-    response_model=CourseResponse,
+    response_model=APIResponse,
     summary="Replace a course",
     description="Replace all editable fields of an existing course. Only administrators can perform this operation.",
     responses={
@@ -134,7 +148,10 @@ def replace_course(
             detail="Course not found"
         )
 
-    return replaced_course
+    return success_response(
+    message="Course replaced successfully",
+    data=replaced_course
+)
 
 # Only admin can delete courses
 @router.delete(
@@ -161,6 +178,7 @@ def remove_course(
             detail="Course not found"
         )
 
-    return {
-        "message": "Course deleted successfully"
-    }
+    return success_response(
+    message="Course deleted successfully",
+    data=None
+)

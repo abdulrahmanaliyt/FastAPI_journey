@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
-=======
-from fastapi import APIRouter, Depends, HTTPException, status, Request
->>>>>>> fcd3bc9eb5d783af70f09422dc8e947331f5d185
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.rate_limiter import limiter
@@ -46,10 +42,7 @@ router = APIRouter(
 @limiter.limit("3/hour")
 def register(
     request: Request,
-<<<<<<< HEAD
     background_tasks: BackgroundTasks,
-=======
->>>>>>> fcd3bc9eb5d783af70f09422dc8e947331f5d185
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):

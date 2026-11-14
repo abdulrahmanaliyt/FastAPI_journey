@@ -1,16 +1,18 @@
 from app.models.user import User
 from app.models.student import Student
 
-def test_create_student_profile(client):
 
+def test_create_student_profile(client):
     response = client.post(
         "/students/me",
         json={"name": "Test Student"}
     )
 
     assert response.status_code == 201
-    assert response.json()["name"] == "Test Student"
-    assert "id" in response.json()
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["name"] == "Test Student"
+    assert "id" in body["data"]
 
 
 def test_create_duplicate_student_profile(client):
@@ -37,7 +39,9 @@ def test_get_my_student_profile(client):
     response = client.get("/students/me")
 
     assert response.status_code == 200
-    assert response.json()["name"] == "Test Student"
+    body = response.json()
+    assert body["success"] is True
+    assert body["data"]["name"] == "Test Student"
 
 
 def test_cannot_access_another_users_student(client, db_session):

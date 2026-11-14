@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-
+from app.core.rate_limiter import limiter
 from app.core.dependencies import get_db, get_current_user
 from app.core.responses import success_response
 from app.core.security import create_access_token
@@ -9,6 +9,9 @@ from app.models.user import User
 from app.schemas.common import APIResponse
 from app.schemas.user import UserCreate, UserResponse, Token
 
+from fastapi import BackgroundTasks, Request
+
+from app.tasks.notifications import send_welcome_notification
 from app.services.auth_service import (
     register_user,
     authenticate_user,
@@ -36,12 +39,21 @@ router = APIRouter(
         422: {"description": "Invalid registration data"}
     }
 )
+@limiter.limit("3/hour")
 def register(
+    request: Request,
+    background_tasks: BackgroundTasks,
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
     try:
         new_user = register_user(db, user_data)
+        
+        background_tasks.add_task(
+            send_welcome_notification,
+            new_user.email
+        )
+        
         return success_response(
             message="User registered successfully",
             data=new_user
@@ -82,7 +94,9 @@ def register(
         }
     }
 )
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):

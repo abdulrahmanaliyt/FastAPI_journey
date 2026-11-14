@@ -6,6 +6,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
+from slowapi.errors import RateLimitExceeded
+from app.core.rate_limiter import limiter
+
 from app.core.responses import (
     success_response,
     error_response
@@ -42,6 +45,23 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json"
+)
+
+# Rate Limiting and API Abuse Protection
+app.state.limiter = limiter
+
+async def rate_limit_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=429,
+        content=error_response(
+            "Too many requests. Please try again later."
+        )
+    )
+
+
+app.add_exception_handler(
+    RateLimitExceeded,
+    rate_limit_exception_handler
 )
 
 # Cross-Origin Resource Sharing (CORS)
